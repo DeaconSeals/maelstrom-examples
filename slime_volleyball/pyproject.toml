@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "slime-volleyball"
+version = "0.1.0"
+description = ""
+authors = ["roberte777 <robewilkes@yahoo.com>"]
+readme = "README.md"
+packages = [{include = "slime_volleyball"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+maelstrom = {path = "../../maelstrom-staging"}
+snake-eyes = {path = "../../snake_eyes"}
+slimevolleygym = "^0.1.0"
+opencv-python = "^4.7.0.72"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
