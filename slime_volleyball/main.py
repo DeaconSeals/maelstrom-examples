@@ -18,147 +18,136 @@ def main():
     maelstrom = Maelstrom(**config["MAELSTROM"], **config)
     maelstrom = maelstrom.run()
     print(maelstrom.log)
+    env.reset()
     env.close()
 
 
 def fitness(
-    right_slime: GeneticProgrammingPopulation,
     left_slime: GeneticProgrammingPopulation,
+    right_slime: GeneticProgrammingPopulation,
     samples: int = 5,
     **kwargs,
 ):
     """
     Fitness function for the population
     """
-    env = kwargs["env"]
+    env = kwargs.get("env")
     if left_slime.population is None or right_slime.population is None:
         raise ValueError("Pops must not be None")
     matches = []
     evals = 0
     matches_counter = [0 for _ in right_slime.population]
-    for left in range(len(left_slime.population)):
-        right_opponents = set()
+    for ind1 in range(len(left_slime.population)):
+        opponents = set()
         for _ in range(samples):
-            right_opponent = random.choice(
+            opponent = random.choice(
                 [
                     ind
                     for ind in range(len(right_slime.population))
-                    if ind not in right_opponents and matches_counter[ind] < 50
+                    if ind not in opponents and matches_counter[ind] < 50
                 ]
             )
-            matches.append((right_opponent, left))
-            right_opponents.add(right_opponent)
-            matches_counter[right_opponent] += 1
-
+            matches.append((ind1, opponent))
+            opponents.add(opponent)
+            matches_counter[opponent] += 1
     matches_counter = [0 for _ in left_slime.population]
-    for right in range(len(right_slime.population)):
-        left_opponents = set()
+    for ind1 in range(len(right_slime.population)):
+        opponents = set()
         for _ in range(samples):
-            left_opponent = random.choice(
+            opponent = random.choice(
                 [
                     ind
                     for ind in range(len(left_slime.population))
-                    if ind not in left_opponents and matches_counter[ind] < 50
+                    if ind not in opponents and matches_counter[ind] < 50
                 ]
             )
-            # matches always follow the format (right, left)
-            matches.append((right, left_opponent))
-            left_opponents.add(left_opponent)
-            matches_counter[left_opponent] += 1
+            matches.append((opponent, ind1))
+            opponents.add(opponent)
+            matches_counter[opponent] += 1
     evaluate_matches(
-        right_slime.population,
         left_slime.population,
+        right_slime.population,
         matches,
         env,
     )
-    right_slime.evals += len(matches)
     left_slime.evals += len(matches)
+    right_slime.evals += len(matches)
     evals += len(matches)
 
-    # play a show match between the best individuals
-    # find the member of the population with the highest fitness
-    best_right = max(right_slime.population, key=lambda x: x.fitness)
+    print(
+        "Average left fitness: ",
+        statistics.mean([i.fitness for i in left_slime.population]),
+    )
+    print(
+        "Average right fitness: ",
+        statistics.mean([i.fitness for i in right_slime.population]),
+    )
+
+    # show match
     best_left = max(left_slime.population, key=lambda x: x.fitness)
+    best_right = max(right_slime.population, key=lambda x: x.fitness)
+    res = play_match(env, best_left, best_right, render=True)
+    print("Best left fitness: ", best_left.fitness)
+    print("Best right fitness: ", best_right.fitness)
+    print("Match result: ", res)
 
-    # print(best_right.genotype.print_tree())
-    # print(best_left.genotype.print_tree())
-    results = play_match(env, best_right, best_left, render=True)
-    env.reset()
-    print("Contender 1: ", best_right.fitness)
-    print("Contender 2: ", best_left.fitness)
-    print("Show match: ", results)
-
-    print("average for this generation:")
-    print("right: ", statistics.mean([i.fitness for i in right_slime.population]))
-    print("left: ", statistics.mean([i.fitness for i in left_slime.population]))
-
-    return gather_data(right_slime, left_slime, evals), evals
+    return gather_data(left_slime, right_slime, evals), evals
 
 
 def evaluate_matches(
-    right_pop: list[GeneticProgrammingIndividual],
-    left_pop: list[GeneticProgrammingIndividual],
+    pop1: list[GeneticProgrammingIndividual],
+    pop2: list[GeneticProgrammingIndividual],
     matches: list[tuple[int, int]],
     env,
 ):
     """
     Evaluates all matches
-
     Arguments:
         pop1: Population 1
         pop2: Population 2
         matches: List of matches to be played
     """
-    for individual in right_pop:
+    for individual in pop1:
         individual.trials = []
-    for individual in left_pop:
+    for individual in pop2:
         individual.trials = []
+
     for match in matches:
-        right_opp = right_pop[match[0]]
-        left_opp = left_pop[match[1]]
-        reward = play_match(env, right_opp, left_opp)
-        env.reset()
+        opp1 = pop1[match[0]]
+        opp2 = pop2[match[1]]
+        reward = play_match(env, opp1, opp2)
+        opp1.trials.append(reward)
+        opp2.trials.append(reward)
 
-        right_opp.trials.append(reward)
-        left_opp.trials.append(reward)
-    for individual in right_pop:
+    for individual in pop1:
         individual.fitness = statistics.mean(individual.trials)
-    for individual in left_pop:
+    for individual in pop2:
         individual.fitness = statistics.mean(individual.trials)
 
 
-def play_match(
-    env,
-    right_opp: GeneticProgrammingIndividual,
-    left_opp: GeneticProgrammingIndividual,
-    render=False,
-) -> int:
+def play_match(env, opp1, opp2, render=False):
     total_reward = 0
-    right_obs = env.reset()
-    left_obs = right_obs
-    if right_opp.genotype is None or left_opp.genotype is None:
+    obs1 = env.reset()
+    obs2 = obs1
+    if opp1.genotype is None or opp2.genotype is None:
         raise ValueError("Genotype must not be None")
-    for rounds_kept_up in range(10_000):
-        right_q_values = []
-        left_q_values = []
+    for kept_up in range(10000):
+        q_values1 = []
+        q_values2 = []
         for action in range(3):
-            right_q_values.append(
-                right_opp.genotype.execute({"obs": right_obs, "action": action})
-            )
-            left_q_values.append(
-                left_opp.genotype.execute({"obs": left_obs, "action": action})
-            )
+            q_values1.append(opp1.genotype.execute({"obs": obs1, "action": action}))
+            q_values2.append(opp2.genotype.execute({"obs": obs2, "action": action}))
 
-        right_action = right_q_values.index(max(right_q_values))
-        left_action = left_q_values.index(max(left_q_values))
+        action1 = q_values1.index(max(q_values1))
+        action2 = q_values2.index(max(q_values2))
 
-        # turn the actions into a one-hot vector
-        right_action = [1 if i == right_action else 0 for i in range(3)]
-        left_action = [1 if i == left_action else 0 for i in range(3)]
+        # transform the action into a one-hot vector
+        action1 = [1 if i == action1 else 0 for i in range(3)]
+        action2 = [1 if i == action2 else 0 for i in range(3)]
 
-        right_obs, reward, done, info = env.step(right_action, left_action)
-        left_obs = info["otherObs"]
-        total_reward = rounds_kept_up
+        obs1, reward, done, info = env.step(action1, action2)
+        obs2 = info["otherObs"]
+        total_reward = kept_up
         if render:
             sleep(0.02)
             env.render()
