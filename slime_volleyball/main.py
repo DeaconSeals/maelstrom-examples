@@ -116,11 +116,11 @@ def evaluate_matches(
     for match in matches:
         right_opp = right_pop[match[0]]
         left_opp = left_pop[match[1]]
-        reward = play_match(env, right_opp, left_opp)
+        right_reward, left_reward = play_match(env, right_opp, left_opp)
         env.reset()
 
-        right_opp.trials.append(reward)
-        left_opp.trials.append(reward)
+        right_opp.trials.append(right_reward)
+        left_opp.trials.append(left_reward)
     for individual in right_pop:
         individual.fitness = statistics.mean(individual.trials)
     for individual in left_pop:
@@ -133,7 +133,8 @@ def play_match(
     left_opp: GeneticProgrammingIndividual,
     render=False,
 ) -> int:
-    total_reward = 0
+    right_reward = 0
+    left_reward = 0
     right_obs = env.reset()
     left_obs = right_obs
     if right_opp.genotype is None or left_opp.genotype is None:
@@ -158,13 +159,29 @@ def play_match(
 
         right_obs, reward, done, info = env.step(right_action, left_action)
         left_obs = info["otherObs"]
-        total_reward = rounds_kept_up
+        right_reward += 1
+        left_reward += 1
+        right_reward += rounds_kept_up * 0.01
+        left_reward += rounds_kept_up * 0.01
+        if reward == 1:
+            right_reward += 40
+            left_reward -= 40
+        elif reward == -1:
+            right_reward -= 40
+            left_reward += 40
+
         if render:
             sleep(0.02)
             env.render()
         if done:
+            if reward == 1:
+                right_reward += 50
+                left_reward -= 50
+            elif reward == -1:
+                right_reward -= 50
+                left_reward += 50
             break
-    return total_reward
+    return right_reward, left_reward
 
 
 def gather_data(
