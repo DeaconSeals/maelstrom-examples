@@ -138,7 +138,7 @@ def play_match(
     left_obs = right_obs
     if right_opp.genotype is None or left_opp.genotype is None:
         raise ValueError("Genotype must not be None")
-    for rounds_kept_up in range(10_000):
+    for rounds_kept_up in range(10000):
         right_q_values = []
         left_q_values = []
         for action in range(3):
