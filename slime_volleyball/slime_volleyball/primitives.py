@@ -1,3 +1,4 @@
+import random
 from maelstrom.genotype import GeneticTree
 
 
@@ -89,3 +90,51 @@ def mul(float_1, float_2):
 @GeneticTree.declare_primitive(GENERAL, FLOAT, (FLOAT, FLOAT))
 def div(float_1, float_2):
     return float_1 / float_2 if float_2 != 0 else float_1
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, ())
+def small_random(context):
+    return random.uniform(-3, 3)
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, ())
+def large_random(context):
+    return random.uniform(-20, 20)
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, (FLOAT, FLOAT))
+def max_floats(float_1, float_2):
+    return float_1 if float_1 > float_2 else float_2
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, (FLOAT, FLOAT))
+def min_floats(float_1, float_2):
+    return float_1 if float_1 < float_2 else float_2
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, ())
+def if_then_else1(context):
+    if context["obs"][0] > context["obs"][1]:
+        return context["obs"][2]
+    return context["obs"][3]
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, ())
+def if_then_else2(context):
+    if context["obs"][1] > context["obs"][2]:
+        return context["obs"][3]
+    return context["obs"][4]
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, ())
+def if_then_else3(context):
+    if context["obs"][4] > context["obs"][5]:
+        return context["obs"][6]
+    return context["obs"][7]
+
+
+@GeneticTree.declare_primitive(GENERAL, FLOAT, ())
+def if_then_else4(context):
+    if context["obs"][1] > context["obs"][7]:
+        return context["obs"][11]
+    return context["obs"][3]
