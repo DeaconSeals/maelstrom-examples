@@ -3,63 +3,103 @@ from maelstrom.individual import GeneticProgrammingIndividual
 from numpy import random
 from slimevolleygym import SlimeVolleyEnv, gym
 from snake_eyes import read_config
-from maelstrom.population import GeneticProgrammingPopulation
+from maelstrom.population import GeneticProgrammingPopulation, statistics
 from maelstrom import Maelstrom
 from slime_volleyball.primitives import *
+from time import sleep
 
 
 def main():
     """
     Main function
     """
+    env = gym.make("SlimeVolley-v0")
     config = read_config("./configs/main.cfg", globals(), locals())
     maelstrom = Maelstrom(**config["MAELSTROM"], **config)
     maelstrom = maelstrom.run()
     print(maelstrom.log)
+    env.close()
 
 
 def fitness(
-    left_slime: GeneticProgrammingPopulation,
     right_slime: GeneticProgrammingPopulation,
+    left_slime: GeneticProgrammingPopulation,
     samples: int = 5,
     **kwargs,
 ):
     """
     Fitness function for the population
     """
+    env = kwargs["env"]
     if left_slime.population is None or right_slime.population is None:
         raise ValueError("Pops must not be None")
     matches = []
     evals = 0
     matches_counter = [0 for _ in right_slime.population]
-    for ind1 in range(len(left_slime.population)):
-        opponents = set()
+    for left in range(len(left_slime.population)):
+        right_opponents = set()
         for _ in range(samples):
-            opponent = random.choice(
+            right_opponent = random.choice(
                 [
                     ind
                     for ind in range(len(right_slime.population))
-                    if ind not in opponents and matches_counter[ind] < 50
+                    if ind not in right_opponents and matches_counter[ind] < 50
                 ]
             )
-            matches.append((ind1, opponent))
-            opponents.add(opponent)
-            matches_counter[opponent] += 1
+            matches.append((right_opponent, left))
+            right_opponents.add(right_opponent)
+            matches_counter[right_opponent] += 1
+
+    matches_counter = [0 for _ in left_slime.population]
+    for right in range(len(right_slime.population)):
+        left_opponents = set()
+        for _ in range(samples):
+            left_opponent = random.choice(
+                [
+                    ind
+                    for ind in range(len(left_slime.population))
+                    if ind not in left_opponents and matches_counter[ind] < 50
+                ]
+            )
+            # matches always follow the format (right, left)
+            matches.append((right, left_opponent))
+            left_opponents.add(left_opponent)
+            matches_counter[left_opponent] += 1
     evaluate_matches(
-        left_slime.population,
         right_slime.population,
+        left_slime.population,
         matches,
+        env,
     )
-    left_slime.evals += len(matches)
     right_slime.evals += len(matches)
+    left_slime.evals += len(matches)
     evals += len(matches)
-    return gather_data(left_slime, right_slime, evals), evals
+
+    # play a show match between the best individuals
+    # find the member of the population with the highest fitness
+    best_right = max(right_slime.population, key=lambda x: x.fitness)
+    best_left = max(left_slime.population, key=lambda x: x.fitness)
+
+    # print(best_right.genotype.print_tree())
+    # print(best_left.genotype.print_tree())
+    results = play_match(env, best_right, best_left, render=True)
+    env.reset()
+    print("Contender 1: ", best_right.fitness)
+    print("Contender 2: ", best_left.fitness)
+    print("Show match: ", results)
+
+    print("average for this generation:")
+    print("right: ", statistics.mean([i.fitness for i in right_slime.population]))
+    print("left: ", statistics.mean([i.fitness for i in left_slime.population]))
+
+    return gather_data(right_slime, left_slime, evals), evals
 
 
 def evaluate_matches(
-    pop1: list[GeneticProgrammingIndividual],
-    pop2: list[GeneticProgrammingIndividual],
+    right_pop: list[GeneticProgrammingIndividual],
+    left_pop: list[GeneticProgrammingIndividual],
     matches: list[tuple[int, int]],
+    env,
 ):
     """
     Evaluates all matches
@@ -69,59 +109,62 @@ def evaluate_matches(
         pop2: Population 2
         matches: List of matches to be played
     """
-    results = {}
-    # env = gym.make("SlimeVolley-v0")
-    env = SlimeVolleyEnv()
-
+    for individual in right_pop:
+        individual.trials = []
+    for individual in left_pop:
+        individual.trials = []
     for match in matches:
-        total_reward = 0
-        obs1 = env.reset()
-        obs2 = obs1
-        opp1 = pop1[match[0]]
-        opp2 = pop2[match[1]]
-        if opp1.genotype is None or opp2.genotype is None:
-            raise ValueError("Genotype must not be None")
-        for _ in range(1000):
-            q_values1 = []
-            q_values2 = []
-            for action in range(3):
-                q_values1.append(opp1.genotype.execute({"obs": obs1, "action": action}))
-                q_values2.append(opp2.genotype.execute({"obs": obs2, "action": action}))
+        right_opp = right_pop[match[0]]
+        left_opp = left_pop[match[1]]
+        reward = play_match(env, right_opp, left_opp)
+        env.reset()
 
-            action1 = q_values1.index(max(q_values1))
-            action2 = q_values2.index(max(q_values2))
-            if action1 == 0:
-                action1 = [1, 0, 0]
-            if action1 == 1:
-                action1 = [0, 1, 0]
-            if action1 == 2:
-                action1 = [0, 0, 1]
-            if action2 == 0:
-                action2 = [1, 0, 0]
-            if action2 == 1:
-                action2 = [0, 1, 0]
-            if action2 == 2:
-                action2 = [0, 0, 1]
+        right_opp.trials.append(reward)
+        left_opp.trials.append(reward)
+    for individual in right_pop:
+        individual.fitness = statistics.mean(individual.trials)
+    for individual in left_pop:
+        individual.fitness = statistics.mean(individual.trials)
 
-            obs1, reward, done, info = env.step(action1, action2)
-            obs2 = info["otherObs"]
-            total_reward += reward
+
+def play_match(
+    env,
+    right_opp: GeneticProgrammingIndividual,
+    left_opp: GeneticProgrammingIndividual,
+    render=False,
+) -> int:
+    total_reward = 0
+    right_obs = env.reset()
+    left_obs = right_obs
+    if right_opp.genotype is None or left_opp.genotype is None:
+        raise ValueError("Genotype must not be None")
+    for rounds_kept_up in range(10_000):
+        right_q_values = []
+        left_q_values = []
+        for action in range(3):
+            right_q_values.append(
+                right_opp.genotype.execute({"obs": right_obs, "action": action})
+            )
+            left_q_values.append(
+                left_opp.genotype.execute({"obs": left_obs, "action": action})
+            )
+
+        right_action = right_q_values.index(max(right_q_values))
+        left_action = left_q_values.index(max(left_q_values))
+
+        # turn the actions into a one-hot vector
+        right_action = [1 if i == right_action else 0 for i in range(3)]
+        left_action = [1 if i == left_action else 0 for i in range(3)]
+
+        right_obs, reward, done, info = env.step(right_action, left_action)
+        left_obs = info["otherObs"]
+        total_reward = rounds_kept_up
+        if render:
+            sleep(0.02)
             env.render()
-            if done:
-                break
-        env.close()
-        if results.get(match[0]):
-            results[match[0]] = (results[match[0]] + total_reward) / 2
-        else:
-            results[match[0]] = total_reward
-        if results.get(match[1]):
-            results[match[1]] = (results[match[1]] + -total_reward) / 2
-        else:
-            results[match[1]] = -total_reward
-    for index, individual in enumerate(pop1):
-        individual.fitness = results[index]
-    for index, individual in enumerate(pop2):
-        individual.fitness = results[index]
+        if done:
+            break
+    return total_reward
 
 
 def gather_data(
