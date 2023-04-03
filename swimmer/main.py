@@ -15,18 +15,21 @@ def main():
     island.run()
 
     # find the best champion and render
-    print(island.populations["swimmers"])
     best = max(island.populations["swimmers"].best, key=lambda x: x.fitness)
+    print("Best agent's fitness: ", best.fitness)
     genotype = best.genotype
     env.unwrapped.render_mode = "human"
-    observation, info = env.reset()
+    observation, _ = env.reset()
+    fitness = 0
     for _ in range(1_000):
         action = genotype.execute(observation)
-        observation, _, terminated, truncated, info = env.step(action)
+        observation, reward, terminated, truncated, _ = env.step(action)
         env.render()
+        fitness += reward
 
         if terminated or truncated:
             break
+    print("Fitness during rendering: ", fitness)
     env.close()
 
     plot_data(island.log, "Swimmer", "Fitness", "Generation")
