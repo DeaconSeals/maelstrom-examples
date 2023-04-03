@@ -14,6 +14,8 @@ def main():
     island.populations["swimmers"].best = []
     island.run()
 
+    plot_data(island.log, "Swimmer", "Fitness", "Generation")
+
     # find the best champion and render
     best = max(island.populations["swimmers"].best, key=lambda x: x.fitness)
     print("Best agent's fitness: ", best.fitness)
@@ -31,8 +33,6 @@ def main():
             break
     print("Fitness during rendering: ", fitness)
     env.close()
-
-    plot_data(island.log, "Swimmer", "Fitness", "Generation")
 
 
 if __name__ == "__main__":
