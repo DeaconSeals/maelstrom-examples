@@ -38,7 +38,7 @@ def plot_data(data: list[dict], title: str, y_label: str, x_label: str):
             f.write(f"{i}\t|\t{data['avg_fitness'][i]}\t|\t{data['max_fitness'][i]}\n")
 
     fig, ax = plt.subplots()
-    ax.set_ylim([-100, 100])
+    ax.set_ylim([-500, 500])
     ax.plot([i for i, _ in enumerate(data["avg_fitness"])], data["avg_fitness"])
     ax.set(xlabel=x_label, ylabel=y_label, title=title)
     plt.show()
