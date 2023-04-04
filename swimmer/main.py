@@ -8,7 +8,7 @@ from swimmer.evaluation import evaluation
 
 
 def main():
-    env = gym.make("Swimmer-v4", ctrl_cost_weight=0.1)
+    env = gym.make("Swimmer-v4", ctrl_cost_weight=0.01)
     config = read_config("./configs/main.cfg", globals(), locals())
     island = GeneticProgrammingIsland(**config["ISLAND"], **config)
     island.populations["swimmers"].best = []
