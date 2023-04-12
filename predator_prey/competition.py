@@ -251,13 +251,13 @@ def sampleEvaluations(
         matches.clear()
         for predatorIndex in range(len(predators.population)):
             counter = 0
-            for preyKey in reversed(prey.hallOfFame):
+            for preyKey in reversed(prey.hall_of_fame):
                 matches.append((predatorIndex, preyKey))
                 counter += 1
                 if counter >= hallOfFameSize:
                     break
         results = evaluateMatches(
-            predators.population, prey.hallOfFame, matches, executor, world_kwargs
+            predators.population, prey.hall_of_fame, matches, executor, world_kwargs
         )
         for i in range(len(matches)):
             predators.population[matches[i][0]].trials.append(results[i][0])
@@ -268,14 +268,14 @@ def sampleEvaluations(
         # evaluate prey against hall of fame
         matches.clear()
         counter = 0
-        for predatorKey in reversed(predators.hallOfFame):
+        for predatorKey in reversed(predators.hall_of_fame):
             for preyIndex in range(len(prey.population)):
                 matches.append((predatorKey, preyIndex))
             counter += 1
             if counter >= hallOfFameSize:
                 break
         results = evaluateMatches(
-            predators.hallOfFame, prey.population, matches, executor, world_kwargs
+            predators.hall_of_fame, prey.population, matches, executor, world_kwargs
         )
         for i in range(len(matches)):
             prey.population[matches[i][1]].trials.append(results[i][1])
