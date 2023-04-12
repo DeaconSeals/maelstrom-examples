@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "swimmer"
+version = "0.1.0"
+description = ""
+authors = ["roberte777 <robewilkes@yahoo.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+maelstrom = {path = "../../maelstrom-staging"}
+snake-eyes = {path = "../../snake_eyes"}
+gymnasium = {extras = ["mujoco"], version = "^0.28.1"}
+matplotlib = "^3.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
