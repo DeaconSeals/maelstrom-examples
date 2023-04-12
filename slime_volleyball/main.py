@@ -15,9 +15,10 @@ def main():
     Main function
     """
     env = gym.make("SlimeVolley-v0")
-    config = read_config("./configs/basic.cfg", globals(), locals())
+    # config = read_config("./configs/basic.cfg", globals(), locals())
     # config = read_config("./configs/mix.cfg", globals(), locals())
     # config = read_config("./configs/volley.cfg", globals(), locals())
+    config = read_config("./configs/maelstrom.cfg", globals(), locals())
     maelstrom = Maelstrom(**config["MAELSTROM"], **config)
     maelstrom = maelstrom.run()
     print(maelstrom.log)
