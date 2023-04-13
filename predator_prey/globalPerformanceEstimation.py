@@ -15,7 +15,7 @@ def summonChampions(championFile):
 			experimentCompetitors = json.load(file)
 	for run, competitors in enumerate(experimentCompetitors):
 		for species, population in competitors.items():
-			experimentCompetitors[run][species] = [GeneticTree.fromDict(dictionary) for dictionary in population]
+			experimentCompetitors[run][species] = [GeneticTree.from_dict(dictionary) for dictionary in population]
 	return experimentCompetitors
 
 def assessChampions(filenames):

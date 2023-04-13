@@ -31,7 +31,7 @@ def localTournaments(experimentDir, finalChampions=5, parallel_workers=2, more_c
 	for run, competitors in enumerate(experimentCompetitors):
 		evaluations = 1
 		for species, population in competitors.items():
-			experimentCompetitors[run][species] = [GeneticTree.fromDict(dictionary) for dictionary in population]
+			experimentCompetitors[run][species] = [GeneticTree.from_dict(dictionary) for dictionary in population]
 			evaluations *= len(population)
 			# print(f'run {run} {species} {len(population)}')
 		totalEvaluations.append(evaluations)
@@ -52,11 +52,11 @@ def localTournaments(experimentDir, finalChampions=5, parallel_workers=2, more_c
 		champions.append(dict())
 		for species, population in competitors.items():
 			if len(population) <= finalChampions:
-				champions[run][species] = [individual.toDict() for individual in experimentCompetitors[run][species]]
+				champions[run][species] = [individual.to_dict() for individual in experimentCompetitors[run][species]]
 			else:
 				data = [(index, statistics.mean(scores)) for index, scores in enumerate(population)]
 				data = nlargest(finalChampions, data, key=lambda individual: individual[1])
-				champions[run][species] = [experimentCompetitors[run][species][index].toDict() for index, _ in data]
+				champions[run][species] = [experimentCompetitors[run][species][index].to_dict() for index, _ in data]
 
 	with Path(experimentDir, 'champions.json').open('w') as file:
 		json.dump(champions, file, separators=(',', ':'))

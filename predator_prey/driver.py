@@ -15,11 +15,10 @@ import pickle
 import sys
 import json
 from time import strftime, localtime
-from configparser import ConfigParser
 import multiprocessing
 import concurrent.futures
 
-from snake_eyes.snakeeyes import readConfig
+from snake_eyes import read_config
 from argparse import ArgumentParser
 
 # from PIL import Image, ImageDraw # (commented out so dependencies are resolved)
@@ -87,7 +86,7 @@ def main():
     )
     args = arg_parser.parse_args()
 
-    config = readConfig(args.config, globals(), locals())
+    config = read_config(args.config, globals(), locals())
     # print(config.keys())
     # for section in config:
     # 	print(section, config[section])

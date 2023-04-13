@@ -1,5 +1,5 @@
 from PredatorPrey.world import World
-from maelstrom.genotype import GeneticTree
+from maelstrom.genotype import GeneticTree, Node
 from primitives import *
 from maelstrom.population import GeneticProgrammingPopulation
 from unorderedWrapper import unorderedWrapper
