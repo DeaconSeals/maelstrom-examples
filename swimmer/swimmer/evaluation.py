@@ -8,12 +8,10 @@ def evaluation(swimmers: GeneticProgrammingPopulation, **kwargs):
         raise ValueError("Population is empty.")
     for individual in swimmers.population:
         individual.fitness = 0
-        if individual.genotype is None:
-            raise ValueError("Individual has no genotype.")
         observation, info = env.reset()
 
         for _ in range(1_000):
-            action = individual.genotype.execute(observation)
+            action = individual.execute(observation)
             observation, reward, terminated, truncated, info = env.step(action)
             individual.fitness += reward
 
