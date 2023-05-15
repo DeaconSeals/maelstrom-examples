@@ -20,19 +20,19 @@ def add(float_1, float_2):
 
 @GeneticTree.declare_primitive(GENERAL, FLOAT, (FLOAT, FLOAT))
 def sub(float_1, float_2):
-    """Add two floats."""
+    """Subtract two floats."""
     return float_1 - float_2
 
 
 @GeneticTree.declare_primitive(GENERAL, FLOAT, (FLOAT, FLOAT))
 def mul(float_1, float_2):
-    """Add two floats."""
+    """Multiply two floats."""
     return float_1 * float_2
 
 
 @GeneticTree.declare_primitive(GENERAL, FLOAT, (FLOAT, FLOAT))
 def div(float_1, float_2):
-    """Add two floats."""
+    """Divide two floats."""
     return float_1 / float_2 if float_2 != 0 else float_1
 
 
