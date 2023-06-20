@@ -3,6 +3,9 @@ import jax.numpy as jnp
 from jax import lax, jit, vmap
 import numpy as np
 from maelstrom.population import GeneticProgrammingPopulation
+from unorderedWrapper import unorderedWrapper
+import multiprocessing
+import os
 
 @jit
 def cartesian_to_polar(state, r_bound):
@@ -95,9 +98,58 @@ def round_robin_evaluation(
         # Generate observations from 2D vectorized JIT-compiled function
         observations = map_observations2d(state, pred_actions, prey_actions, r_bound)
 
+        # executor
+        tasks = [unorderedWrapper(idx, val[0], val[1]) for idx, val in enumerate(zip(v_pred, observations))]
+        for idx, val in enumerate(zip(v_prey, lax.transpose(observations, (1,0,2)))):
+            tasks.append(unorderedWrapper(idx+competition_shape[0], val[0], val[1]))
+        pred_actions = [None for _ in v_pred]
+        prey_actions = [None for _ in v_prey]
+
+        # executor = kwargs['executor']
+        cores = min(os.cpu_count()*5, sum(competition_shape))
+        with multiprocessing.pool.ThreadPool(cores) as executor:
+            # cores = executor.__dict__["_processes"]
+            max_sequence=1000000
+            chunks_per_processor = 10
+            chunksize = max(1, min(max_sequence, len(tasks)) // (cores * chunks_per_processor))
+            while chunksize > cores * 100:  # heuristically bound max chunksize
+                if chunksize == 1:
+                    break
+                chunks_per_processor += 1
+                chunksize = max(
+                    1, min(max_sequence, len(tasks)) // (cores * chunks_per_processor)
+                )
+
+            # evaluate competitions in segments of max_sequence length to manage memory
+            start = 0
+            end = 0
+            for i in range(len(tasks) // max_sequence):
+                end += max_sequence
+                for task in executor.imap_unordered(
+                    unorderedWrapper.execute, tasks[start:end], chunksize=chunksize
+                ):
+                    idx, result = task
+                    if idx < competition_shape[0]:
+                        pred_actions[idx] = result
+                    else:
+                        prey_actions[idx-competition_shape[0]] = result
+                start = end
+            else:
+                if tasks[start:]:  # catch cases where there are no remaining tasks
+                    for task in executor.imap_unordered(
+                        unorderedWrapper.execute, tasks[start:], chunksize=chunksize
+                    ):
+                        idx, result = task
+                        if idx < competition_shape[0]:
+                            pred_actions[idx] = result
+                        else:
+                            prey_actions[idx-competition_shape[0]] = result
+            assert None not in prey_actions and None not in pred_actions, "An evaluation was missed during competition"
+        pred_actions = jnp.array(np.array(pred_actions))
+        prey_actions = lax.transpose(jnp.array(np.array(prey_actions)), (1,0))
         # Evaluate agent controllers to generate actions
-        pred_actions = jnp.array(np.array([fun(curr_observation) for fun, curr_observation in zip(v_pred, observations)]))
-        prey_actions = lax.transpose(jnp.array(np.array([fun(curr_observation) for fun, curr_observation in zip(v_prey, lax.transpose(observations, (1,0,2)))])), (1,0))
+        # pred_actions = jnp.array(np.array([fun(curr_observation) for fun, curr_observation in zip(v_pred, observations)]))
+        # prey_actions = lax.transpose(jnp.array(np.array([fun(curr_observation) for fun, curr_observation in zip(v_prey, lax.transpose(observations, (1,0,2)))])), (1,0))
         
         # Determine next state using 2D vectorized JIT-compiled function
         state = map_move2d(pred_actions, prey_actions, predator_move_speed, prey_move_speed, r_bound, state).block_until_ready()
