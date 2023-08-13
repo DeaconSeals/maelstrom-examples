@@ -19,7 +19,7 @@ def main():
     # find the best champion and render
     best = max(island.populations["cars"].best, key=lambda x: x.fitness)
     print("Best agent's fitness: ", best.fitness)
-    genotype = best.genotype
+    genotype = best
     env.unwrapped.render_mode = "human"
     observation, _ = env.reset()
     fitness = 0

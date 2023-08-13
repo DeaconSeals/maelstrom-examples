@@ -1,10 +1,9 @@
 [tool.poetry]
-name = "mountain-car"
+name = "fast-predator-prey"
 version = "0.1.0"
 description = ""
 authors = ["roberte777 <robewilkes@yahoo.com>"]
 readme = "README.md"
-packages = [{include = "mountain_car"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -12,6 +11,8 @@ maelstrom-evolution = "^0.1"
 snake-eyes-parser = "^0.1"
 gymnasium = {extras = ["classic-control"], version = "^0.28.1"}
 matplotlib = "^3.7.1"
+jaxlib = "^0.4.14"
+jax = "^0.4.14"
 
 
 [build-system]

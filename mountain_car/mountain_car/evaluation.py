@@ -8,16 +8,12 @@ def evaluation(cars: GeneticProgrammingPopulation, **kwargs):
         raise ValueError("Population is empty.")
     for individual in cars.population:
         individual.fitness = 0
-        if individual.genotype is None:
-            raise ValueError("Individual has no genotype.")
         observation, info = env.reset()
 
         for _ in range(1_000):
             q_values = []
             for i in range(3):
-                q_values.append(
-                    individual.genotype.execute({"obs": observation, "action": i})
-                )
+                q_values.append(individual.execute({"obs": observation, "action": i}))
             action = q_values.index(max(q_values))
             observation, reward, terminated, truncated, info = env.step(action)
             individual.fitness += reward
